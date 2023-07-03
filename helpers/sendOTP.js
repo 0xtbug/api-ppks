@@ -7,9 +7,9 @@ const sendOTP = async (deviceId, nomorhp) => {
         phone: nomorhp
     });
     return {
-      isAccepted: true,
       info: response.data.info,
-      msg: "Otp telah terkirim!"
+      msg: "Otp telah terkirim!",
+      statusCode: response.data["status-code"]
     };
   } catch (error) {
     throw {
