@@ -7,5 +7,6 @@ exports.signUpValidation = [
 ];
 
 exports.loginValidation = [
+  check("deviceid", "Deviceid tidak boleh kosong!").not().isEmpty(),
   check("nomorhp", "Isi nomor hp dengan benar!").isLength({ min: 11, max: 11 })
 ];
