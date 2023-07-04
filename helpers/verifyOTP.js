@@ -9,6 +9,9 @@ const verifyOTP = async (deviceId, otp) => {
     return {
       isAccepted: response.data.isAccepted,
       info: response.data.info,
+      token: response.data.token,
+      phone: response.data.phone,
+      statusCode: response.data["status-code"]
     };
   } catch (error) {
     throw {
