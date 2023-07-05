@@ -19,17 +19,63 @@ const daftar = async (req, res) => {
 
   try {
     db.query(
-      "SELECT * FROM users WHERE nomorhp = ?",
-      [nomorhp],
+      "SELECT * FROM users WHERE nomorhp = ? OR device_id = ?",
+      [nomorhp, deviceId],
       async (err, result) => {
         if (err) {
           return res.status(500).json({ error: err.message });
         }
 
         if (result && result.length) {
-          return res
-            .status(409)
-            .json({ isAccepted: false, msg: "Nomor ini sudah digunakan!" });
+          if (result.some((user) => user.device_id === deviceId)) {
+            return res.status(409).json({
+              isAccepted: false,
+              msg: "Device ID ini sudah digunakan!",
+            });
+          } else {
+            const userWithVerification = result.find((user) => user.is_verified === 1);
+
+            if (userWithVerification) {
+              return res.status(409).json({
+                isAccepted: false,
+                msg: "Pengguna dengan nomor ini sudah terdaftar!",
+              });
+            } else {
+              const existingUser = result[0];
+              const userId = existingUser.id;
+              const updateQuery = "UPDATE users SET device_id = ? WHERE id = ?";
+              const updateValues = [deviceId, userId];
+
+              db.query(updateQuery, updateValues, async (err) => {
+                if (err) {
+                  return res.status(500).json({ error: err.message });
+                }
+
+                try {
+                  const otpResponse = await sendOTP(deviceId, nomorhp);
+                  const otp = otpResponse.info.split(" ")[4];
+                  const hashedOTP = await bcrypt.hash(otp, 10);
+
+                  const otpUpdateQuery = "UPDATE users SET otp = ? WHERE id = ?";
+                  const otpUpdateValues = [hashedOTP, userId];
+
+                  db.query(otpUpdateQuery, otpUpdateValues, (err) => {
+                    if (err) {
+                      return res.status(500).json({ error: err.message });
+                    }
+
+                    return res.status(200).json({
+                      isAccepted: true,
+                      msg: "Device ID telah diperbarui dan OTP telah dikirim ulang!",
+                      data: otpResponse,
+                    });
+                  });
+                } catch (error) {
+                  return res.status(500).json({ error: error.message });
+                }
+              });
+            }
+          }
         } else {
           try {
             const otpResponse = await sendOTP(deviceId, nomorhp);
@@ -61,6 +107,7 @@ const daftar = async (req, res) => {
   }
 };
 
+
 const login = async (req, res) => {
   const errors = validationResult(req);
 
@@ -73,39 +120,57 @@ const login = async (req, res) => {
 
   try {
     db.query(
-      "SELECT * FROM users WHERE device_id = ? AND nomorhp = ?",
-      [deviceId, nomorhp],
+      "SELECT * FROM users WHERE nomorhp = ?",
+      [nomorhp],
       async (err, result) => {
         if (err) {
           return res.status(500).json({ error: err.message });
         }
 
         if (result && result.length) {
-          try {
-            const otpResponse = await sendOTP(deviceId, nomorhp);
-            const otp = otpResponse.info.split(" ")[4];
-            const hashedOTP = await bcrypt.hash(otp, 10);
+          const existingUser = result[0];
 
-            db.query(
-              "UPDATE users SET otp = ? WHERE device_id = ? AND nomorhp = ?",
-              [hashedOTP, deviceId, nomorhp],
-              (err) => {
-                if (err) {
-                  return res.status(500).json({ error: err.message });
-                }
-
-                return res.status(200).json({
-                  isAccepted: true,
-                  msg: "Login berhasil!",
-                  data: otpResponse,
-                });
-              }
-            );
-          } catch (error) {
-            return res.status(500).json({ error: error.message });
+          if (existingUser.is_verified === 0) {
+            return res.status(401).json({
+              error: "Login gagal! Pengguna belum terverifikasi, silahkan daftar ulang.",
+            });
           }
+
+          const userId = existingUser.id;
+          const updateQuery = "UPDATE users SET device_id = ? WHERE id = ?";
+          const updateValues = [deviceId, userId];
+
+          db.query(updateQuery, updateValues, async (err) => {
+            if (err) {
+              return res.status(500).json({ error: err.message });
+            }
+
+            try {
+              const otpResponse = await sendOTP(deviceId, nomorhp);
+              const otp = otpResponse.info.split(" ")[4];
+              const hashedOTP = await bcrypt.hash(otp, 10);
+
+              db.query(
+                "UPDATE users SET otp = ? WHERE device_id = ? AND nomorhp = ?",
+                [hashedOTP, deviceId, nomorhp],
+                (err) => {
+                  if (err) {
+                    return res.status(500).json({ error: err.message });
+                  }
+
+                  return res.status(200).json({
+                    isAccepted: true,
+                    msg: "Login berhasil!",
+                    data: otpResponse,
+                  });
+                }
+              );
+            } catch (error) {
+              return res.status(500).json({ error: error.message });
+            }
+          });
         } else {
-          return res.status(401).json({ error: "Login gagal! Periksa deviceId dan nomorhp." });
+          return res.status(401).json({ error: "Login gagal! Pengguna tidak ditemukan." });
         }
       }
     );
@@ -113,6 +178,7 @@ const login = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
+
 
 verifikasi = async (req, res) => {
   const errors = validationResult(req);
@@ -127,9 +193,7 @@ verifikasi = async (req, res) => {
   const otpResponse = await verifyOTP(deviceId, otp);
 
   if (!deviceId || !otp) {
-    return res
-      .status(400)
-      .json({ error: "Verifikasi gagal!" });
+    return res.status(400).json({ error: "Verifikasi gagal!" });
   }
 
   try {
@@ -142,21 +206,24 @@ verifikasi = async (req, res) => {
       const token = otpResponse.token;
 
       await db.query(
-        "UPDATE users SET token = ? WHERE device_id = ? AND nomorhp = ?",
+        "UPDATE users SET token = ?, is_verified = 1 WHERE device_id = ? AND nomorhp = ?",
         [token, deviceId, nomorhp]
       );
     }
 
     return res.status(200).json({ data: otpResponse });
-    } catch (error) {
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
   }
 }
 
+
 const logout = (req, res) => {
-  const authToken = req.headers.authorization.split(' ')[1];
+  const authToken = req.headers.authorization;
 
   try {
-    const decoded = jwt.verify(authToken, JWT_SECRET);
+    const token = authToken.split(" ")[1];
+    const decoded = jwt.verify(token, JWT_SECRET);
     const deviceId = decoded.device_id;
 
     db.query("UPDATE users SET token = NULL WHERE device_id = ?", [deviceId], (err) => {
@@ -164,10 +231,10 @@ const logout = (req, res) => {
         return res.status(500).json({ error: err.message });
       }
 
-      return res.status(200).json({ success: true, message: "Logout berhasil" });
+      return res.status(200).json({ isAccepted: true, message: "Logout berhasil" });
     });
   } catch (error) {
-    return res.status(401).json({ error: "Token tidak valid" });
+    return res.status(401).json({ isAccepted: false, message: "Token tidak valid" });
   }
 };
 
