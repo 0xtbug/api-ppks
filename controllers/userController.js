@@ -4,6 +4,7 @@ const bcrypt = require("bcrypt");
 const sendOTP = require("../helpers/sendOTP");
 const verifyOTP = require("../helpers/verifyOTP");
 const jwt = require("jsonwebtoken");
+const fs = require("fs");
 const { JWT_SECRET } = process.env;
 const id = "62";
 
@@ -239,9 +240,95 @@ const logout = (req, res) => {
   }
 };
 
+const setlaporan = (req, res)=>{
+  const authToken = req.headers.authorization;
+  const token = authToken.split(' ')[0].trim();
+  const decoded = jwt.verify(token, JWT_SECRET);
+  const deviceId = decoded.device_id;
+
+  db.query('SELECT is_verified FROM users WHERE device_id= ?', [deviceId], (err, rows)=>{
+    if(err){
+      console.log(err)
+      return res.status(500);
+    }else{
+      if(rows.length && rows){
+        var nama = "anon";
+        var npm = "NULL"
+        var filename = "";
+        if(req.body.bukti) {
+          var base64Data = req.body.bukti.replace(/^data:image\/png;base64,/, "");
+          filename = "/img/" + Date.now() + ".png";
+          fs.writeFile(__dirname + filename, base64Data, 'base64', function(err) {
+            console.log(err);
+          });
+        }
+        if(req.body.nama) nama = req.body.nama;
+        if(req.body.npm) npm = req.body.npm;
+        console.log(req.body.nama)
+        if(req.body.usia && req.body.tempat && req.body.tanggal && req.body.jenis && req.body.ciri && req.body.kronologi && req.body.jenis_kelamin) {
+          db.query('INSERT INTO laporan VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [req.body.nama, req.body.usia, req.body.npm, req.body.tempat, req.body.tanggal, req.body.waktu, req.body.jenis, req.body.ciri, req.body.kronologi, filename, req.body.jenis_kelamin, deviceId], (err) => {
+            if(err){
+              fs.unlinkSync(__dirname + filename);
+              console.log(err);
+              return res.status(500);
+            }else {
+              return res.status(200).json({"isAccepted": true})
+            }
+          });
+        }else{
+          return res.status(406).json({ "isAccepted": false, "msg": "Isi data yang diperlukan"});
+        }
+      }else{
+        return res.status(401).json({ "isAccepted": false, "msg": "user belum terverifikasi" })
+      }
+    }
+  });
+}
+
+const getlaporan = (req, res)=>{
+  const authToken = req.headers.authorization;
+  const token = authToken.split(' ')[0].trim();
+  const decoded = jwt.verify(token, JWT_SECRET);
+  const deviceId = decoded.device_id;
+
+  db.query('SELECT is_verified FROM users WHERE device_id= ?', [deviceId], (err, rows)=>{
+    if(err){
+      console.log(err);
+      return res.status(500);
+    }else{
+      if(rows && rows.length) {
+        conn.query('SELECT * FROM laporan ORDER BY tanggal_kejadian', (err, rows) => {
+          if (err) {
+            return res.status(500);
+          } else {
+            const list = rows;
+            list.forEach((val) => {
+              val.bukti = process.env.HOST + val.bukti;
+            })
+            return res.status(200).json(list);
+          }
+        })
+      }else{
+        return res.status(401).json({ "isAccepted": false, "msg": "user belum terverifikasi" })
+      }
+    }
+  })
+}
+
+const showimg = (req, res)=>{
+  if(fs.existsSync(__dirname + '/img/' + req.params.id)){
+    return res.status(200).sendfile(__dirname + '/img/' + req.params.id);
+  }else{
+    return res.status(404);
+  }
+}
+
 module.exports = {
   daftar,
   login,
   verifikasi,
   logout,
+  setlaporan,
+  getlaporan,
+  showimg,
 };

@@ -8,5 +8,9 @@ router.post("/user/daftar", signUpValidationUser, userController.daftar);
 router.post("/user/login", loginValidationUser, userController.login);
 router.post("/user/verifikasi", userController.verifikasi);
 router.post("/user/logout", isAuthorize, userController.logout);
+router.post("/user/setlaporan", isAuthorize, userController.setlaporan);
+router.post("/user/getlaporan", isAuthorize, userController.getlaporan);
+
+router.get("/img/:id", userController.showimg);
 
 module.exports = router;
