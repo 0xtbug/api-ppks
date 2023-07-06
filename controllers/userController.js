@@ -297,7 +297,7 @@ const getlaporan = (req, res)=>{
       return res.status(500);
     }else{
       if(rows && rows.length) {
-        conn.query('SELECT * FROM laporan ORDER BY tanggal_kejadian', (err, rows) => {
+        db.query('SELECT * FROM laporan ORDER BY tanggal_kejadian', (err, rows) => {
           if (err) {
             return res.status(500);
           } else {
@@ -323,6 +323,55 @@ const showimg = (req, res)=>{
   }
 }
 
+const setpfp = (req, res) =>{
+  const authToken = req.headers.authorization;
+  const token = authToken.split(' ')[0].trim();
+  const decoded = jwt.verify(token, JWT_SECRET);
+  const deviceId = decoded.device_id;
+
+  var filename= "";
+  if(req.body.pfp) {
+    var base64Data = req.body.pfp.replace(/^data:image\/png;base64,/, "");
+    filename = "/img/" + Date.now() + ".png";
+    fs.writeFile(__dirname + filename, base64Data, 'base64', function(err) {
+      console.log(err);
+    });
+  }
+
+  db.query('SELECT pfp FROM users WHERE device_id= ?', [deviceId], (err, rows)=> {
+    if(rows && rows.length){
+      var deleteFile = __dirname + rows[0].pfp;
+      fs.unlinkSync(deleteFile);
+    }
+
+    db.query('UPDATE users SET pfp= ? WHERE device_id= ?', [filename, deviceId], (err, rows) => {
+      if (err) {
+        fs.unlinkSync(__dirname + filename);
+        console.log(err);
+        return res.status(500);
+      } else {
+        return res.status(200).json({"isAccepted": true})
+      }
+    })
+  });
+}
+
+const getpfp = (req, res)=> {
+  const authToken = req.headers.authorization;
+  const token = authToken.split(' ')[0].trim();
+  const decoded = jwt.verify(token, JWT_SECRET);
+  const deviceId = decoded.device_id;
+
+  db.query('SELECT pfp FROM users WHERE device_id= ?', (err, rows)=>{
+    if(err){
+      console.log(err);
+      res.status(500);
+    }else{
+      res.status(200).json({ "img": rows[0].pfp });
+    }
+  })
+}
+
 module.exports = {
   daftar,
   login,
@@ -331,4 +380,6 @@ module.exports = {
   setlaporan,
   getlaporan,
   showimg,
+  setpfp,
+  getpfp,
 };
