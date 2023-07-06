@@ -190,9 +190,9 @@ verifikasi = async (req, res) => {
 
   try {
     await db.query(
-      "UPDATE users SET last_login = now() WHERE device_id = ? AND nomorhp = ?",
+      "UPDATE users SET last_login = now(), is_logout = 0 WHERE device_id = ? AND nomorhp = ?",
       [deviceId, nomorhp]
-    );
+    );    
 
     if (otpResponse.isAccepted) {
       const token = otpResponse.token;
