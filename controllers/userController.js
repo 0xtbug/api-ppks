@@ -339,7 +339,7 @@ const setpfp = (req, res) =>{
   }
 
   db.query('SELECT pfp FROM users WHERE device_id= ?', [deviceId], (err, rows)=> {
-    if(rows && rows.length){
+    if(rows && rows.length && rows[0].pfp){
       var deleteFile = __dirname + rows[0].pfp;
       fs.unlinkSync(deleteFile);
     }
@@ -367,7 +367,11 @@ const getpfp = (req, res)=> {
       console.log(err);
       res.status(500);
     }else{
-      res.status(200).json({ "img": rows[0].pfp });
+      const list = rows;
+      list.forEach((val) => {
+        val.pfp = process.env.HOST + val.pfp;
+      })
+      res.status(200).json({ "img": list[0].pfp, "device_id": deviceId });
     }
   })
 }
