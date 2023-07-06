@@ -10,6 +10,8 @@ router.post("/user/verifikasi", userController.verifikasi);
 router.post("/user/logout", isAuthorize, userController.logout);
 router.post("/user/setlaporan", isAuthorize, userController.setlaporan);
 router.post("/user/getlaporan", isAuthorize, userController.getlaporan);
+router.post("/user/setpfp", isAuthorize, userController.setpfp);
+router.post("/user/getpfp", isAuthorize, userController.getpfp);
 
 router.get("/img/:id", userController.showimg);
 
