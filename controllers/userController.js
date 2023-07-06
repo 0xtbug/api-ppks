@@ -27,54 +27,47 @@ const daftar = async (req, res) => {
         }
 
         if (result && result.length) {
-          if (result.some((user) => user.device_id === deviceId)) {
+          const userWithVerification = result.find((user) => user.is_verified === 1);
+
+          if (userWithVerification) {
             return res.status(409).json({
               isAccepted: false,
-              msg: "Device ID ini sudah digunakan!",
+              msg: "Pengguna dengan nomor ini sudah terdaftar!",
             });
           } else {
-            const userWithVerification = result.find((user) => user.is_verified === 1);
+            const existingUser = result[0];
+            const userId = existingUser.id;
+            const updateQuery = "UPDATE users SET device_id = ? WHERE id = ?";
+            const updateValues = [deviceId, userId];
 
-            if (userWithVerification) {
-              return res.status(409).json({
-                isAccepted: false,
-                msg: "Pengguna dengan nomor ini sudah terdaftar!",
-              });
-            } else {
-              const existingUser = result[0];
-              const userId = existingUser.id;
-              const updateQuery = "UPDATE users SET device_id = ? WHERE id = ?";
-              const updateValues = [deviceId, userId];
+            db.query(updateQuery, updateValues, async (err) => {
+              if (err) {
+                return res.status(500).json({ error: err.message });
+              }
 
-              db.query(updateQuery, updateValues, async (err) => {
-                if (err) {
-                  return res.status(500).json({ error: err.message });
-                }
+              try {
+                const otpResponse = await sendOTP(deviceId, nomorhp);
+                const otp = otpResponse.info.split(" ")[4];
+                const hashedOTP = await bcrypt.hash(otp, 10);
 
-                try {
-                  const otpResponse = await sendOTP(deviceId, nomorhp);
-                  const otp = otpResponse.info.split(" ")[4];
-                  const hashedOTP = await bcrypt.hash(otp, 10);
+                const otpUpdateQuery = "UPDATE users SET otp = ? WHERE id = ?";
+                const otpUpdateValues = [hashedOTP, userId];
 
-                  const otpUpdateQuery = "UPDATE users SET otp = ? WHERE id = ?";
-                  const otpUpdateValues = [hashedOTP, userId];
+                db.query(otpUpdateQuery, otpUpdateValues, (err) => {
+                  if (err) {
+                    return res.status(500).json({ error: err.message });
+                  }
 
-                  db.query(otpUpdateQuery, otpUpdateValues, (err) => {
-                    if (err) {
-                      return res.status(500).json({ error: err.message });
-                    }
-
-                    return res.status(200).json({
-                      isAccepted: true,
-                      msg: "Device ID telah diperbarui dan OTP telah dikirim ulang!",
-                      data: otpResponse,
-                    });
+                  return res.status(200).json({
+                    isAccepted: true,
+                    msg: "Device ID telah diperbarui dan OTP telah dikirim ulang!",
+                    data: otpResponse,
                   });
-                } catch (error) {
-                  return res.status(500).json({ error: error.message });
-                }
-              });
-            }
+                });
+              } catch (error) {
+                return res.status(500).json({ error: error.message });
+              }
+            });
           }
         } else {
           try {
@@ -106,7 +99,6 @@ const daftar = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
 
 const login = async (req, res) => {
   const errors = validationResult(req);
@@ -217,47 +209,33 @@ verifikasi = async (req, res) => {
   }
 }
 
-
 const logout = (req, res) => {
   const authToken = req.headers.authorization;
 
   try {
-    const token = authToken.split(" ")[1];
+    const token = authToken.split(' ')[0].trim();
     const decoded = jwt.verify(token, JWT_SECRET);
     const deviceId = decoded.device_id;
 
-    db.query("UPDATE users SET token = NULL WHERE device_id = ?", [deviceId], (err) => {
+    db.query("SELECT is_logout FROM users WHERE device_id = ?", [deviceId], (err, result) => {
       if (err) {
         return res.status(500).json({ error: err.message });
       }
 
-      return res.status(200).json({ isAccepted: true, message: "Logout berhasil" });
+      if (result && result.length > 0 && result[0].is_logout === 1) {
+        return res.status(200).json({ isAccepted: false, message: "Anda sudah logout!" });
+      }
+
+      db.query("UPDATE users SET is_logout = 1 WHERE device_id = ?", [deviceId], (err) => {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+
+        return res.status(200).json({ isAccepted: true, message: "Logout berhasil!" });
+      });
     });
   } catch (error) {
     return res.status(401).json({ isAccepted: false, message: "Token tidak valid" });
-  }
-};
-
-getUser = (req, res) => {
-  const authToken = req.headers.authorization.split(' ')[1];
-
-  try {
-    const decoded = jwt.verify(authToken, JWT_SECRET);
-
-    db.query('SELECT * FROM users WHERE device_id = ? AND nomorhp = ? AND token = ?',
-      [decoded.device_id, decoded.phone, authToken],
-      function(error, result){
-        if (error) throw error;
-
-        if (result.length === 0) {
-          return res.status(401).json({ error: "Token tidak valid" });
-        }
-
-        return res.status(200).json({ success: true, data:result[0], message: 'Data berhasil diambil!' });
-      }
-    );
-  } catch (error) {
-    return res.status(401).json({ error: "Token tidak valid" });
   }
 };
 
@@ -266,5 +244,4 @@ module.exports = {
   login,
   verifikasi,
   logout,
-  getUser,
 };
