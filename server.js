@@ -1,10 +1,10 @@
 require("dotenv").config();
-require("./config/dbConnection");
 
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const userRouter = require("./routes/userRoute");
+const adminRouter = require("./routes/adminRoute");
 
 const app = express();
 
@@ -15,7 +15,12 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(cors());
 
+app.get("/", (req, res) => {
+  res.send("ngapain dek");
+});
+
 app.use("/api", userRouter);
+app.use("/api", adminRouter);
 
 // Error handling
 app.use((err, req, res, next) => {
@@ -26,4 +31,5 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(process.env.PORT_SERVER, () => console.log(`Server running in port ${process.env.PORT_SERVER}`));
+const PORT = process.env.PORT_SERVER || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

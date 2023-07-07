@@ -1,6 +1,7 @@
 const { validationResult } = require("express-validator");
 const db = require("../config/dbConnection");
 const bcrypt = require("bcrypt");
+const path = require('path');
 const sendOTP = require("../helpers/sendOTP");
 const verifyOTP = require("../helpers/verifyOTP");
 const jwt = require("jsonwebtoken");
@@ -240,46 +241,46 @@ const logout = (req, res) => {
   }
 };
 
-const setlaporan = (req, res)=>{
+const setlaporan = (req, res) => {
   const authToken = req.headers.authorization;
   const token = authToken.split(' ')[0].trim();
   const decoded = jwt.verify(token, JWT_SECRET);
   const deviceId = decoded.device_id;
 
-  db.query('SELECT is_verified FROM users WHERE device_id= ?', [deviceId], (err, rows)=>{
-    if(err){
+  db.query('SELECT is_verified FROM users WHERE device_id= ?', [deviceId], (err, rows) => {
+    if (err) {
       console.log(err)
       return res.status(500);
-    }else{
-      if(rows.length && rows){
+    } else {
+      if (rows.length && rows) {
         var nama = "anon";
         var npm = "NULL"
         var filename = "";
-        if(req.body.bukti) {
+        if (req.body.bukti) {
           var base64Data = req.body.bukti.replace(/^data:image\/png;base64,/, "");
-          filename = "/img/" + Date.now() + ".png";
-          fs.writeFile(__dirname + filename, base64Data, 'base64', function(err) {
+          filename = Date.now() + ".png";
+          fs.writeFile(path.join(__dirname, '..', 'src', 'img', 'laporan', filename), base64Data, 'base64', function (err) {
             console.log(err);
           });
         }
-        if(req.body.nama) nama = req.body.nama;
-        if(req.body.npm) npm = req.body.npm;
-        console.log(req.body.nama)
-        if(req.body.usia && req.body.tempat && req.body.tanggal && req.body.jenis && req.body.ciri && req.body.kronologi && req.body.jenis_kelamin) {
+        if (req.body.nama) nama = req.body.nama;
+        if (req.body.npm) npm = req.body.npm;
+        // console.log(req.body.nama)
+        if (req.body.usia && req.body.tempat && req.body.tanggal && req.body.jenis && req.body.ciri && req.body.kronologi && req.body.jenis_kelamin) {
           db.query('INSERT INTO laporan VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [req.body.nama, req.body.usia, req.body.npm, req.body.tempat, req.body.tanggal, req.body.waktu, req.body.jenis, req.body.ciri, req.body.kronologi, filename, req.body.jenis_kelamin, deviceId], (err) => {
-            if(err){
-              fs.unlinkSync(__dirname + filename);
+            if (err) {
+              fs.unlinkSync(path.join(__dirname, '..', 'src', 'img', 'laporan', filename));
               console.log(err);
               return res.status(500);
-            }else {
-              return res.status(200).json({"isAccepted": true})
+            } else {
+              return res.status(200).json({ "isAccepted": true })
             }
           });
-        }else{
-          return res.status(406).json({ "isAccepted": false, "msg": "Isi data yang diperlukan"});
+        } else {
+          return res.status(406).json({ "isAccepted": false, "msg": "Isi data yang diperlukan" });
         }
-      }else{
-        return res.status(401).json({ "isAccepted": false, "msg": "user belum terverifikasi" })
+      } else {
+        return res.status(401).json({ "isAccepted": false, "msg": "user belum terverifikasi" });
       }
     }
   });
@@ -316,37 +317,39 @@ const getlaporan = (req, res)=>{
 }
 
 const showimg = (req, res)=>{
-  if(fs.existsSync(__dirname + '/img/' + req.params.id)){
-    return res.status(200).sendfile(__dirname + '/img/' + req.params.id);
+  if(fs.existsSync(__dirname + '../src/img/laporan' + req.params.id)){
+    return res.status(200).sendfile(__dirname + '../src/img/laporan' + req.params.id);
   }else{
     return res.status(404);
   }
 }
 
-const setpfp = (req, res) =>{
+const setpfp = (req, res) => {
   const authToken = req.headers.authorization;
   const token = authToken.split(' ')[0].trim();
   const decoded = jwt.verify(token, JWT_SECRET);
   const deviceId = decoded.device_id;
 
-  var filename= "";
-  if(req.body.pfp) {
+  var filename = "";
+  if (req.body.pfp) {
     var base64Data = req.body.pfp.replace(/^data:image\/png;base64,/, "");
-    filename = "/img/" + Date.now() + ".png";
-    fs.writeFile(__dirname + filename, base64Data, 'base64', function(err) {
+    filename = Date.now() + ".png";
+    var filePath = path.join(__dirname, '../src/img/user', filename);
+    fs.writeFile(filePath, base64Data, 'base64', function(err) {
       console.log(err);
     });
   }
 
-  db.query('SELECT pfp FROM users WHERE device_id= ?', [deviceId], (err, rows)=> {
-    if(rows && rows.length && rows[0].pfp){
-      var deleteFile = __dirname + rows[0].pfp;
+  db.query('SELECT pfp FROM users WHERE device_id= ?', [deviceId], (err, rows) => {
+    if (rows && rows.length && rows[0].pfp) {
+      var deleteFile = path.join(__dirname, '../src/img/user', rows[0].pfp);
       fs.unlinkSync(deleteFile);
     }
 
     db.query('UPDATE users SET pfp= ? WHERE device_id= ?', [filename, deviceId], (err, rows) => {
       if (err) {
-        fs.unlinkSync(__dirname + filename);
+        var deleteFile = path.join(__dirname, '../src/img/user', filename);
+        fs.unlinkSync(deleteFile);
         console.log(err);
         return res.status(500);
       } else {
@@ -376,6 +379,44 @@ const getpfp = (req, res)=> {
   })
 }
 
+const ubahNama = async (req, res) => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const deviceId = req.body.deviceid;
+  const nomorhp = id + req.body.nomorhp;
+  const namaBaru = req.body.nama;
+
+  try {
+    db.query(
+      "UPDATE users SET nama = ? WHERE device_id = ? AND nomorhp = ?",
+      [namaBaru, deviceId, nomorhp],
+      async (err, result) => {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+
+        if (result && result.affectedRows > 0) {
+          return res.status(200).json({
+            isUpdated: true,
+            msg: "Nama berhasil diubah!",
+          });
+        } else {
+          return res.status(400).json({
+            isUpdated: false,
+            msg: "Gagal mengubah nama. Pengguna tidak ditemukan.",
+          });
+        }
+      }
+    );
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   daftar,
   login,
@@ -386,4 +427,5 @@ module.exports = {
   showimg,
   setpfp,
   getpfp,
+  ubahNama,
 };
