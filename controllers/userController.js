@@ -126,7 +126,7 @@ const login = async (req, res) => {
 
           if (existingUser.is_verified === 0) {
             return res.status(401).json({
-              error: "Login gagal! Pengguna belum terverifikasi, silahkan daftar ulang.",
+              info: "Login gagal! Pengguna belum terverifikasi, silahkan daftar ulang.",
             });
           }
 
@@ -164,7 +164,7 @@ const login = async (req, res) => {
             }
           });
         } else {
-          return res.status(401).json({ error: "Login gagal! Pengguna tidak ditemukan." });
+          return res.status(401).json({ info: "Login gagal! Pengguna tidak ditemukan." });
         }
       }
     );
@@ -249,31 +249,43 @@ const setlaporan = (req, res) => {
 
   db.query('SELECT is_verified FROM users WHERE device_id= ?', [deviceId], (err, rows) => {
     if (err) {
-      console.log(err)
-      return res.status(500);
+      console.log(err);
+      return res.status(500).send();
     } else {
-      if (rows.length && rows) {
+      if (rows.length && rows[0].is_verified === 1) {
         var nama = "anon";
-        var npm = "NULL"
+        var npm = "NULL";
         var filename = "";
+        var status = 0;
         if (req.body.bukti) {
           var base64Data = req.body.bukti.replace(/^data:image\/png;base64,/, "");
           filename = Date.now() + ".png";
           fs.writeFile(path.join(__dirname, '..', 'src', 'img', 'laporan', filename), base64Data, 'base64', function (err) {
-            console.log(err);
+            if (err) {
+              console.log(err);
+              return res.status(500).json({ "info": err });
+            }
           });
         }
         if (req.body.nama) nama = req.body.nama;
         if (req.body.npm) npm = req.body.npm;
-        // console.log(req.body.nama)
         if (req.body.usia && req.body.tempat && req.body.tanggal && req.body.jenis && req.body.ciri && req.body.kronologi && req.body.jenis_kelamin) {
-          db.query('INSERT INTO laporan VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [req.body.nama, req.body.usia, req.body.npm, req.body.tempat, req.body.tanggal, req.body.waktu, req.body.jenis, req.body.ciri, req.body.kronologi, filename, req.body.jenis_kelamin, deviceId], (err) => {
+          db.query('INSERT INTO laporan VALUES(NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', [req.body.nama, req.body.usia, req.body.npm, req.body.tempat, req.body.tanggal, req.body.waktu, req.body.jenis, req.body.ciri, req.body.kronologi, filename, req.body.jenis_kelamin, deviceId, status], (err) => {
             if (err) {
-              fs.unlinkSync(path.join(__dirname, '..', 'src', 'img', 'laporan', filename));
+              if (filename !== "") {
+                fs.unlinkSync(path.join(__dirname, '..', 'src', 'img', 'laporan', filename));
+              }
               console.log(err);
-              return res.status(500);
+              return res.status(500).send();
             } else {
-              return res.status(200).json({ "isAccepted": true })
+              db.query('UPDATE laporan SET status = 1 WHERE device_id = ?', [deviceId], (err) => {
+                if (err) {
+                  console.log(err);
+                  return res.status(500).json({ "info": err });
+                } else {
+                  return res.status(200).json({ "isAccepted": true });
+                }
+              });
             }
           });
         } else {
