@@ -411,7 +411,10 @@ const ubahNama = async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const deviceId = req.body.deviceid;
+  const authToken = req.headers.authorization;
+  const token = authToken.split(' ')[0].trim();
+  const decoded = jwt.verify(token, JWT_SECRET);
+  const deviceId = decoded.device_id;
   const nomorhp = id + req.body.nomorhp;
   const namaBaru = req.body.nama;
 

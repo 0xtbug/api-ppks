@@ -13,7 +13,7 @@ router.post("/user/getlaporan", isAuthorize, userController.getlaporan);
 router.post("/user/setpfp", isAuthorize, userController.setpfp);
 router.post("/user/getpfp", isAuthorize, userController.getpfp);
 router.post("/user/setnama", isAuthorize, userController.ubahNama);
-
+router.post("/user/artikel/all", isAuthorize, userController.viewAllArtikel);
 router.get("/img/:id", userController.showimg);
 
 module.exports = router;

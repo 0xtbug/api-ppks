@@ -17,6 +17,6 @@ router.post("/admin/artikel/create", isAuthorize, adminController.createArtikel)
 router.put("/admin/artikel/update/:id", isAuthorize, adminController.updateArtikel);
 router.delete("/admin/artikel/delete/:id", isAuthorize, adminController.deleteArtikelById);
 router.get("/admin/artikel/:id", isAuthorize, adminController.getArtikelById);
-router.get("/admin/artikel/all", isAuthorize, adminController.viewAllArtikel);
+router.post("/admin/artikel/all", isAuthorize, adminController.viewAllArtikel);
 
 module.exports = router;
