@@ -250,7 +250,7 @@ const setlaporan = (req, res) => {
   db.query('SELECT is_verified FROM users WHERE device_id= ?', [deviceId], (err, rows) => {
     if (err) {
       console.log(err);
-      return res.status(500).send();
+      return res.status(500).json({ "info": err });
     } else {
       if (rows.length && rows[0].is_verified === 1) {
         var nama = "anon";
@@ -276,7 +276,7 @@ const setlaporan = (req, res) => {
                 fs.unlinkSync(path.join(__dirname, '..', 'src', 'img', 'laporan', filename));
               }
               console.log(err);
-              return res.status(500).send();
+              return res.status(500).json({ "info": err });
             } else {
               db.query('UPDATE laporan SET status = 1 WHERE device_id = ?', [deviceId], (err) => {
                 if (err) {
