@@ -259,7 +259,7 @@ const setlaporan = (req, res) => {
         var status = 0;
         if (req.body.bukti) {
           var base64Data = req.body.bukti.replace(/^data:image\/png;base64,/, "");
-          filename = Date.now() + ".png";
+          filename = Date.now() + ".jpg";
           fs.writeFile(path.join(__dirname, '..', 'src', 'img', 'laporan', filename), base64Data, 'base64', function (err) {
             if (err) {
               console.log(err);
@@ -316,13 +316,13 @@ const getlaporan = (req, res)=>{
           } else {
             const list = rows;
             list.forEach((val) => {
-              val.bukti = process.env.HOST + val.bukti;
+              val.bukti = process.env.HOST + ":" + process.env.PORT_SERVER + "/src/img/laporan/" + val.bukti;
             })
             return res.status(200).json(list);
           }
         })
       }else{
-        return res.status(401).json({ "isAccepted": false, "msg": "user belum terverifikasi" })
+        return res.status(401).json({ "isAccepted": false, "info": "user belum terverifikasi" })
       }
     }
   })
@@ -348,28 +348,44 @@ const setpfp = (req, res) => {
     filename = Date.now() + ".png";
     var filePath = path.join(__dirname, '../src/img/user', filename);
     fs.writeFile(filePath, base64Data, 'base64', function(err) {
-      console.log(err);
+      if (err) {
+        console.log(err);
+        return res.status(500).json({ "info": err });
+      }
     });
   }
 
-  db.query('SELECT pfp FROM users WHERE device_id= ?', [deviceId], (err, rows) => {
-    if (rows && rows.length && rows[0].pfp) {
-      var deleteFile = path.join(__dirname, '../src/img/user', rows[0].pfp);
-      fs.unlinkSync(deleteFile);
+  db.query('SELECT pfp FROM users WHERE device_id = ?', [deviceId], (err, rows) => {
+    if (err) {
+      console.log(err);
+      return res.status(500).json({ "info": err });
     }
 
-    db.query('UPDATE users SET pfp= ? WHERE device_id= ?', [filename, deviceId], (err, rows) => {
+    if (rows && rows.length && rows[0].pfp) {
+      var deleteFile = path.join(__dirname, '../src/img/user', rows[0].pfp);
+      fs.unlink(deleteFile, (err) => {
+        if (err && err.code !== 'ENOENT') {
+          console.log(err);
+          return res.status(500).json({ "info": err });
+        }
+      });
+    }
+
+    db.query('UPDATE users SET pfp = ? WHERE device_id = ?', [filename, deviceId], (err, rows) => {
       if (err) {
         var deleteFile = path.join(__dirname, '../src/img/user', filename);
-        fs.unlinkSync(deleteFile);
+        fs.unlink(deleteFile, (err) => {
+          console.log(err);
+        });
         console.log(err);
-        return res.status(500);
+        return res.status(500).json({ "info": err });
       } else {
-        return res.status(200).json({"isAccepted": true})
+        return res.status(200).json({ "isAccepted": true, "info": "Foto berhasil diupload!" });
       }
-    })
+    });
   });
-}
+};
+
 
 const getpfp = (req, res)=> {
   const authToken = req.headers.authorization;
@@ -377,16 +393,13 @@ const getpfp = (req, res)=> {
   const decoded = jwt.verify(token, JWT_SECRET);
   const deviceId = decoded.device_id;
 
-  db.query('SELECT pfp FROM users WHERE device_id= ?', (err, rows)=>{
+  db.query('SELECT * FROM users WHERE device_id = ?', [deviceId], (err, rows)=>{
     if(err){
       console.log(err);
-      res.status(500);
+      res.status(500).json( { "info": err } );
     }else{
       const list = rows;
-      list.forEach((val) => {
-        val.pfp = process.env.HOST + val.pfp;
-      })
-      res.status(200).json({ "img": list[0].pfp, "device_id": deviceId });
+      res.status(200).json({ "nama": list[0].nama, "img": process.env.HOST + ":" + process.env.PORT_SERVER + "/src/img/user/" + list[0].pfp, "device_id": deviceId });
     }
   })
 }
@@ -429,6 +442,23 @@ const ubahNama = async (req, res) => {
   }
 };
 
+const viewAllArtikel = (req, res) => {
+  db.query('SELECT * FROM artikel', (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({
+        isRetrieved: false,
+        info: 'Terjadi kesalahan saat mengambil artikel',
+      });
+    }
+
+    return res.status(200).json({
+      isRetrieved: true,
+      artikel: result,
+    });
+  });
+};  
+
 module.exports = {
   daftar,
   login,
@@ -440,4 +470,5 @@ module.exports = {
   setpfp,
   getpfp,
   ubahNama,
+  viewAllArtikel
 };

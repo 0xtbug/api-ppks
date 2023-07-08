@@ -517,7 +517,7 @@ const viewAllArtikel = (req, res) => {
         artikel: result,
       });
     });
-};
+};  
   
 
 module.exports = {
