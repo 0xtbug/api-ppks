@@ -246,7 +246,7 @@ const logout = (req, res) => {
         return res.status(200).json({ isAccepted: false, message: "Anda sudah logout!" });
       }
 
-      db.query("UPDATE users SET is_logout = 1, token = NULL WHERE device_id = ?", [deviceId], (err) => {
+      db.query("UPDATE users SET is_logout = 1, token = NULL, device_id = NULL WHERE device_id = ?", [deviceId], (err) => {
         if (err) {
           return res.status(500).json({ error: err.message });
         }
