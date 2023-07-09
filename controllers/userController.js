@@ -494,7 +494,7 @@ const viewAllArtikel = (req, res) => {
       }
 
       if (rows && rows.length && rows[0].is_verified === 1) {
-        db.query('SELECT * FROM artikel', (err, result) => {
+        db.query('SELECT * FROM artikel ORDER BY update_at DESC', (err, result) => {
           if (err) {
             console.error(err);
             return res.status(500).json({
@@ -508,9 +508,16 @@ const viewAllArtikel = (req, res) => {
             val.thumbnail = process.env.HOST + ':' + process.env.PORT_SERVER + '/api/img/artikel/' + val.thumbnail;
           });
 
-          return res.status(200).json({
-            isRetrieved: true,
-            artikel: list,
+          db.query('SELECT * FROM artikel ORDER BY kunjungan DESC LIMIT 5', (err, rows)=> {
+            var list2 = rows;
+            list2.forEach((val)=>{
+              val.thumbnail = process.env.HOST + ':' + process.env.PORT_SERVER + '/api/img/artikel/' + val.thumbnail;
+            });
+            return res.status(200).json({
+              isRetrieved: true,
+              artikel: list,
+              trending_artikel: list2,
+            });
           });
         });
       } else {
@@ -528,6 +535,18 @@ const viewAllArtikel = (req, res) => {
   }
 };
 
+const kunjunganAdd = (req, res)=>{ // artikel_id: 2
+  const artikelId = req.body.artikel_id;
+
+  db.query('UPDATE artikel SET kunjungan= kunjungan + 1 WHERE id= ?', [artikelId], (err, result)=>{
+    if(err){
+      console.log(err);
+      res.status(500).json({ 'msg': 'tidak dapat menambah' });
+    }else{
+      res.status(200).json({ 'isAccepted': true });
+    }
+  })
+}
 
 module.exports = {
   daftar,
@@ -540,5 +559,6 @@ module.exports = {
   setpfp,
   getpfp,
   ubahNama,
-  viewAllArtikel
+  viewAllArtikel,
+  kunjunganAdd,
 };
