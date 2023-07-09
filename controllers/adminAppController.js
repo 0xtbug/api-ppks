@@ -22,7 +22,7 @@ const getlaporan = (req, res) => {
               } else {
                 const list = rows;
                 list.forEach((val) => {
-                  val.bukti = process.env.HOST + ":" + process.env.PORT_SERVER + "/src/img/laporan/" + val.bukti;
+                  val.bukti = process.env.HOST + ":" + process.env.PORT_SERVER + "/api/img/laporan/" + val.bukti;
                 })
                 return res.status(200).json({"listData": list});
               }
