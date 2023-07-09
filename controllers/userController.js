@@ -152,8 +152,18 @@ const login = async (req, res) => {
                     return res.status(500).json({ error: err.message });
                   }
 
+                  if (existingUser.is_private === 1) {
+                    return res.status(200).json({
+                      isAccepted: true,
+                      isPrivate: true,
+                      msg: "Login berhasil!",
+                      data: otpResponse,
+                    });
+                  }
+
                   return res.status(200).json({
                     isAccepted: true,
+                    isPrivate: false,
                     msg: "Login berhasil!",
                     data: otpResponse,
                   });
@@ -172,7 +182,6 @@ const login = async (req, res) => {
     return res.status(500).json({ error: error.message });
   }
 };
-
 
 verifikasi = async (req, res) => {
   const errors = validationResult(req);
@@ -425,22 +434,39 @@ const ubahNama = async (req, res) => {
 
   try {
     db.query(
-      "UPDATE users SET nama = ? WHERE device_id = ? AND nomorhp = ?",
-      [namaBaru, deviceId, nomorhp],
+      "SELECT is_verified FROM users WHERE device_id = ? AND nomorhp = ?",
+      [deviceId, nomorhp],
       async (err, result) => {
         if (err) {
           return res.status(500).json({ error: err.message });
         }
 
-        if (result && result.affectedRows > 0) {
-          return res.status(200).json({
-            isUpdated: true,
-            msg: "Nama berhasil diubah!",
-          });
+        if (result && result.length && result[0].is_verified === 1) {
+          db.query(
+            "UPDATE users SET nama = ? WHERE device_id = ? AND nomorhp = ?",
+            [namaBaru, deviceId, nomorhp],
+            async (err, result) => {
+              if (err) {
+                return res.status(500).json({ error: err.message });
+              }
+
+              if (result && result.affectedRows > 0) {
+                return res.status(200).json({
+                  isUpdated: true,
+                  msg: "Nama berhasil diubah!",
+                });
+              } else {
+                return res.status(400).json({
+                  isUpdated: false,
+                  msg: "Gagal mengubah nama. Pengguna tidak ditemukan.",
+                });
+              }
+            }
+          );
         } else {
-          return res.status(400).json({
+          return res.status(401).json({
             isUpdated: false,
-            msg: "Gagal mengubah nama. Pengguna tidak ditemukan.",
+            msg: "Hanya pengguna yang terverifikasi yang dapat mengubah nama.",
           });
         }
       }
