@@ -341,6 +341,7 @@ const setpfp = (req, res) => {
   const token = authToken.split(' ')[0].trim();
   const decoded = jwt.verify(token, JWT_SECRET);
   const deviceId = decoded.device_id;
+  const phone = decoded.phone;
 
   var filename = "";
   if (req.body.pfp) {
@@ -355,7 +356,7 @@ const setpfp = (req, res) => {
     });
   }
 
-  db.query('SELECT pfp FROM users WHERE device_id = ?', [deviceId], (err, rows) => {
+  db.query('SELECT pfp FROM users WHERE device_id = ? && nomorhp= ?', [deviceId, phone], (err, rows) => {
     if (err) {
       console.log(err);
       return res.status(500).json({ "info": err });
@@ -371,7 +372,7 @@ const setpfp = (req, res) => {
       });
     }
 
-    db.query('UPDATE users SET pfp = ? WHERE device_id = ?', [filename, deviceId], (err, rows) => {
+    db.query('UPDATE users SET pfp = ? WHERE device_id = ? && nomorhp= ?', [filename, deviceId, phone], (err, rows) => {
       if (err) {
         var deleteFile = path.join(__dirname, '../src/img/user', filename);
         fs.unlink(deleteFile, (err) => {
@@ -392,8 +393,9 @@ const getpfp = (req, res)=> {
   const token = authToken.split(' ')[0].trim();
   const decoded = jwt.verify(token, JWT_SECRET);
   const deviceId = decoded.device_id;
+  const phone = decoded.phone;
 
-  db.query('SELECT * FROM users WHERE device_id = ?', [deviceId], (err, rows)=>{
+  db.query('SELECT * FROM users WHERE device_id = ? && nomorhp= ?', [deviceId, phone], (err, rows)=>{
     if(err){
       console.log(err);
       res.status(500).json( { "info": err } );
