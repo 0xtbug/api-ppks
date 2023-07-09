@@ -455,9 +455,14 @@ const viewAllArtikel = (req, res) => {
       });
     }
 
+    var list = result;
+    list.forEach((val)=>{
+      val.thumbnail = process.env.HOST + ":" + process.env.PORT_SERVER + "/src/img/artikel/" + val.thumbnail;
+    })
+
     return res.status(200).json({
       isRetrieved: true,
-      artikel: result,
+      artikel: list,
     });
   });
 };  
