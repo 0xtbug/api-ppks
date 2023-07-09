@@ -338,7 +338,6 @@ const getlaporan = (req, res)=>{
 }
 
 const showimg = (req, res)=>{
-  console.log(__dirname + '/../src/img/' + req.params.dir + '/' + req.params.id)
   fs.open(path.resolve('src/img/' + req.params.dir + '/' + req.params.id), 'r', (err, data)=>{
     if(err){
       return res.status(404).json({ 'msg': 'File not Found!' });
@@ -413,7 +412,7 @@ const getpfp = (req, res)=> {
       res.status(500).json( { "info": err } );
     }else{
       const list = rows;
-      res.status(200).json({ "nama": list[0].nama, "img": process.env.HOST + ":" + process.env.PORT_SERVER + "/api/img/user/" + list[0].pfp, "device_id": deviceId });
+      res.status(200).json({ "nama": list[0].nama, "img": process.env.HOST + ":" + process.env.PORT_SERVER + "/api/img/user/" + list[0].pfp, "device_id": deviceId, "phone": phone });
     }
   })
 }
