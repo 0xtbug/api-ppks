@@ -24,7 +24,7 @@ const getlaporan = (req, res) => {
                 list.forEach((val) => {
                   val.bukti = process.env.HOST + ":" + process.env.PORT_SERVER + "/src/img/laporan/" + val.bukti;
                 })
-                return res.status(200).json(list);
+                return res.status(200).json({"listData": list});
               }
             })
           } else {
