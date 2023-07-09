@@ -316,7 +316,7 @@ const getlaporan = (req, res)=>{
           } else {
             const list = rows;
             list.forEach((val) => {
-              val.bukti = process.env.HOST + ":" + process.env.PORT_SERVER + "/src/img/laporan/" + val.bukti;
+              val.bukti = process.env.HOST + ":" + process.env.PORT_SERVER + "/api/img/laporan/" + val.bukti;
             })
             return res.status(200).json(list);
           }
@@ -329,11 +329,14 @@ const getlaporan = (req, res)=>{
 }
 
 const showimg = (req, res)=>{
-  if(fs.existsSync(__dirname + '../src/img/laporan' + req.params.id)){
-    return res.status(200).sendfile(__dirname + '../src/img/laporan' + req.params.id);
-  }else{
-    return res.status(404);
-  }
+  console.log(__dirname + '/../src/img/' + req.params.dir + '/' + req.params.id)
+  fs.open(path.resolve('src/img/' + req.params.dir + '/' + req.params.id), 'r', (err, data)=>{
+    if(err){
+      return res.status(404).json({ 'msg': 'File not Found!' });
+    }else{
+      return res.status(200).sendfile(path.resolve('src/img/' + req.params.dir + '/' + req.params.id));
+    }
+  })
 }
 
 const setpfp = (req, res) => {
@@ -401,7 +404,7 @@ const getpfp = (req, res)=> {
       res.status(500).json( { "info": err } );
     }else{
       const list = rows;
-      res.status(200).json({ "nama": list[0].nama, "img": process.env.HOST + ":" + process.env.PORT_SERVER + "/src/img/user/" + list[0].pfp, "device_id": deviceId });
+      res.status(200).json({ "nama": list[0].nama, "img": process.env.HOST + ":" + process.env.PORT_SERVER + "/api/img/user/" + list[0].pfp, "device_id": deviceId });
     }
   })
 }
@@ -459,7 +462,7 @@ const viewAllArtikel = (req, res) => {
 
     var list = result;
     list.forEach((val)=>{
-      val.thumbnail = process.env.HOST + ":" + process.env.PORT_SERVER + "/src/img/artikel/" + val.thumbnail;
+      val.thumbnail = process.env.HOST + ":" + process.env.PORT_SERVER + "/api/img/artikel/" + val.thumbnail;
     })
 
     return res.status(200).json({
