@@ -316,7 +316,7 @@ const getlaporan = (req, res)=>{
           } else {
             const list = rows;
             list.forEach((val) => {
-              val.bukti = process.env.HOST + ":" + process.env.PORT_SERVER + "/src/img/laporan/" + val.bukti;
+              val.bukti = process.env.HOST + ":" + process.env.PORT_SERVER + "/api/img/laporan/" + val.bukti;
             })
             return res.status(200).json(list);
           }
@@ -329,11 +329,14 @@ const getlaporan = (req, res)=>{
 }
 
 const showimg = (req, res)=>{
-  if(fs.existsSync(__dirname + '../src/img/laporan' + req.params.id)){
-    return res.status(200).sendfile(__dirname + '../src/img/laporan' + req.params.id);
-  }else{
-    return res.status(404);
-  }
+  console.log(__dirname + '/../src/img/' + req.params.dir + '/' + req.params.id)
+  fs.open(path.resolve('src/img/' + req.params.dir + '/' + req.params.id), 'r', (err, data)=>{
+    if(err){
+      return res.status(404).json({ 'msg': 'File not Found!' });
+    }else{
+      return res.status(200).sendfile(path.resolve('src/img/' + req.params.dir + '/' + req.params.id));
+    }
+  })
 }
 
 const setpfp = (req, res) => {
@@ -341,6 +344,7 @@ const setpfp = (req, res) => {
   const token = authToken.split(' ')[0].trim();
   const decoded = jwt.verify(token, JWT_SECRET);
   const deviceId = decoded.device_id;
+  const phone = decoded.phone;
 
   var filename = "";
   if (req.body.pfp) {
@@ -355,7 +359,7 @@ const setpfp = (req, res) => {
     });
   }
 
-  db.query('SELECT pfp FROM users WHERE device_id = ?', [deviceId], (err, rows) => {
+  db.query('SELECT pfp FROM users WHERE device_id = ? && nomorhp= ?', [deviceId, phone], (err, rows) => {
     if (err) {
       console.log(err);
       return res.status(500).json({ "info": err });
@@ -371,7 +375,7 @@ const setpfp = (req, res) => {
       });
     }
 
-    db.query('UPDATE users SET pfp = ? WHERE device_id = ?', [filename, deviceId], (err, rows) => {
+    db.query('UPDATE users SET pfp = ? WHERE device_id = ? && nomorhp= ?', [filename, deviceId, phone], (err, rows) => {
       if (err) {
         var deleteFile = path.join(__dirname, '../src/img/user', filename);
         fs.unlink(deleteFile, (err) => {
@@ -392,14 +396,15 @@ const getpfp = (req, res)=> {
   const token = authToken.split(' ')[0].trim();
   const decoded = jwt.verify(token, JWT_SECRET);
   const deviceId = decoded.device_id;
+  const phone = decoded.phone;
 
-  db.query('SELECT * FROM users WHERE device_id = ?', [deviceId], (err, rows)=>{
+  db.query('SELECT * FROM users WHERE device_id = ? && nomorhp= ?', [deviceId, phone], (err, rows)=>{
     if(err){
       console.log(err);
       res.status(500).json( { "info": err } );
     }else{
       const list = rows;
-      res.status(200).json({ "nama": list[0].nama, "img": process.env.HOST + ":" + process.env.PORT_SERVER + "/src/img/user/" + list[0].pfp, "device_id": deviceId });
+      res.status(200).json({ "nama": list[0].nama, "img": process.env.HOST + ":" + process.env.PORT_SERVER + "/api/img/user/" + list[0].pfp, "device_id": deviceId });
     }
   })
 }
@@ -455,9 +460,14 @@ const viewAllArtikel = (req, res) => {
       });
     }
 
+    var list = result;
+    list.forEach((val)=>{
+      val.thumbnail = process.env.HOST + ":" + process.env.PORT_SERVER + "/api/img/artikel/" + val.thumbnail;
+    })
+
     return res.status(200).json({
       isRetrieved: true,
-      artikel: result,
+      artikel: list,
     });
   });
 };  
