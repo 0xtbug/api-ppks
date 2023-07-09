@@ -4,7 +4,8 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const userRouter = require("./routes/userRoute");
-const adminRouter = require("./routes/adminRoute");
+const adminAppRouter = require("./routes/adminAppRoute");
+const adminWebRouter = require("./routes/adminWebRoute");
 
 const app = express();
 
@@ -20,7 +21,8 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api", userRouter);
-app.use("/api", adminRouter);
+app.use("/api", adminAppRouter);
+app.use("/api", adminWebRouter);
 
 // Error handling
 app.use((err, req, res, next) => {

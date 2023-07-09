@@ -535,7 +535,57 @@ const viewAllArtikel = (req, res) => {
       });
     });
 };  
-  
+
+const createAdminUserApp = async (req, res) => {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const nomorhp = "62" + req.body.nomorhp;
+  const nama = req.body.nama;
+  const deviceId = req.body.device_id;
+
+  try {
+    db.query(
+      "SELECT * FROM users WHERE nomorhp = ? OR device_id = ?",
+      [nomorhp, deviceId],
+      async (err, result) => {
+        if (err) {
+          return res.status(500).json({ error: err.message });
+        }
+
+        if (result && result.length) {
+          return res.status(409).json({
+            isCreated: false,
+            msg: "Pengguna dengan nomor ini sudah terdaftar!",
+          });
+        } else {
+          try {
+            const query = `INSERT INTO users (nama, nomorhp, device_id, is_verified, is_private) VALUES (?, ?, ?, 1, 1)`;
+            const values = [nama, nomorhp, deviceId];
+
+            db.query(query, values, (err) => {
+              if (err) {
+                return res.status(400).json({ msg: err.message });
+              }
+
+              return res.status(200).json({
+                isCreated: true,
+                msg: "User admin aplikasi berhasil dibuat!",
+              });
+            });
+          } catch (error) {
+            return res.status(500).json({ error: error.message });
+          }
+        }
+      }
+    );
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+};
 
 module.exports = {
     daftar,
@@ -552,4 +602,5 @@ module.exports = {
     deleteArtikelById,
     getArtikelById,
     viewAllArtikel,
+    createAdminUserApp,
 };

@@ -426,23 +426,24 @@ const ubahNama = async (req, res) => {
 
   const authToken = req.headers.authorization;
   const token = authToken.split(' ')[0].trim();
-  const decoded = jwt.verify(token, JWT_SECRET);
-  const deviceId = decoded.device_id;
-  const nomorhp = id + req.body.nomorhp;
-  const namaBaru = req.body.nama;
 
   try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const deviceId = decoded.device_id;
+    const nomorhp = id + req.body.nomorhp;
+    const namaBaru = req.body.nama;
+
     db.query(
-      "SELECT is_verified FROM users WHERE device_id = ? AND nomorhp = ?",
+      'SELECT is_verified FROM users WHERE device_id = ? AND nomorhp = ?',
       [deviceId, nomorhp],
-      async (err, result) => {
+      async (err, rows) => {
         if (err) {
           return res.status(500).json({ error: err.message });
         }
 
-        if (result && result.length && result[0].is_verified === 1) {
+        if (rows && rows.length && rows[0].is_verified === 1) {
           db.query(
-            "UPDATE users SET nama = ? WHERE device_id = ? AND nomorhp = ?",
+            'UPDATE users SET nama = ? WHERE device_id = ? AND nomorhp = ?',
             [namaBaru, deviceId, nomorhp],
             async (err, result) => {
               if (err) {
@@ -452,12 +453,12 @@ const ubahNama = async (req, res) => {
               if (result && result.affectedRows > 0) {
                 return res.status(200).json({
                   isUpdated: true,
-                  msg: "Nama berhasil diubah!",
+                  info: 'Nama berhasil diubah!',
                 });
               } else {
                 return res.status(400).json({
                   isUpdated: false,
-                  msg: "Gagal mengubah nama. Pengguna tidak ditemukan.",
+                  info: 'Gagal mengubah nama. Pengguna tidak ditemukan.',
                 });
               }
             }
@@ -465,37 +466,68 @@ const ubahNama = async (req, res) => {
         } else {
           return res.status(401).json({
             isUpdated: false,
-            msg: "Hanya pengguna yang terverifikasi yang dapat mengubah nama.",
+            info: 'Hanya pengguna yang terverifikasi yang dapat mengubah nama.',
           });
         }
       }
     );
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(401).json({ info: 'Token tidak valid' });
   }
 };
 
 const viewAllArtikel = (req, res) => {
-  db.query('SELECT * FROM artikel', (err, result) => {
-    if (err) {
-      console.error(err);
-      return res.status(500).json({
-        isRetrieved: false,
-        info: 'Terjadi kesalahan saat mengambil artikel',
-      });
-    }
+  const authToken = req.headers.authorization;
+  const token = authToken.split(' ')[0].trim();
 
-    var list = result;
-    list.forEach((val)=>{
-      val.thumbnail = process.env.HOST + ":" + process.env.PORT_SERVER + "/api/img/artikel/" + val.thumbnail;
-    })
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const deviceId = decoded.device_id;
 
-    return res.status(200).json({
-      isRetrieved: true,
-      artikel: list,
+    db.query('SELECT is_verified FROM users WHERE device_id = ?', [deviceId], (err, rows) => {
+      if (err) {
+        console.error(err);
+        return res.status(500).json({
+          isRetrieved: false,
+          info: 'Terjadi kesalahan saat mengambil data user',
+        });
+      }
+
+      if (rows && rows.length && rows[0].is_verified === 1) {
+        db.query('SELECT * FROM artikel', (err, result) => {
+          if (err) {
+            console.error(err);
+            return res.status(500).json({
+              isRetrieved: false,
+              info: 'Terjadi kesalahan saat mengambil artikel',
+            });
+          }
+
+          var list = result;
+          list.forEach((val) => {
+            val.thumbnail = process.env.HOST + ':' + process.env.PORT_SERVER + '/api/img/artikel/' + val.thumbnail;
+          });
+
+          return res.status(200).json({
+            isRetrieved: true,
+            artikel: list,
+          });
+        });
+      } else {
+        return res.status(401).json({
+          isRetrieved: false,
+          info: 'Pengguna belum terverifikasi',
+        });
+      }
     });
-  });
-};  
+  } catch (error) {
+    return res.status(401).json({
+      isRetrieved: false,
+      info: 'Token tidak valid',
+    });
+  }
+};
+
 
 module.exports = {
   daftar,
