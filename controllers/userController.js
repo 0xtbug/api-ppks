@@ -329,7 +329,6 @@ const getlaporan = (req, res)=>{
 }
 
 const showimg = (req, res)=>{
-  console.log(__dirname + '/../src/img/' + req.params.dir + '/' + req.params.id)
   fs.open(path.resolve('src/img/' + req.params.dir + '/' + req.params.id), 'r', (err, data)=>{
     if(err){
       return res.status(404).json({ 'msg': 'File not Found!' });

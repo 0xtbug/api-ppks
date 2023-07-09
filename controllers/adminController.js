@@ -394,28 +394,40 @@ const updateArtikel = (req, res) => {
             info: "Gagal menyimpan thumbnail artikel",
           });
         }
-        
-        db.query(
-          "UPDATE artikel SET judul = ?, isi = ?, sumber = ?, thumbnail = ? WHERE id = ?",
-          [judul, isi, sumber, filename, artikelId],
-          (err, result) => {
-            if (err) {
-              if (filename) {
-                const deleteFilePath = path.join(__dirname, "../src/img/artikel", filename);
-                fs.unlinkSync(deleteFilePath);
-              }
-              console.error(err);
-              return res.status(500).json({
-                isUpdated: false,
-                info: "Gagal mengupdate artikel",
-              });
+        db.query('SELECT thumbnail FROM artikel WHERE id= ?', [artikelId], (err, rows)=> {
+            //delete old img from local storage
+            const thumbnailPath = rows[0].thumbnail;
+            if (thumbnailPath) {
+                fs.open(path.resolve('src/img/artikel/' + thumbnailPath), 'r', (err, data)=> {   //check if file is exist
+                    if(err) {
+                        console.log('Cant delete, file not found');
+                    }else{
+                        fs.unlinkSync(path.resolve('src/img/artikel/' + thumbnailPath));
+                    }
+                });
             }
-            return res.status(200).json({ 
-                isUpdated: true,
-                info: "Artikel berhasil diupdate!"
-            });
-          }
-        );
+            db.query(
+                "UPDATE artikel SET judul = ?, isi = ?, sumber = ?, thumbnail = ? WHERE id = ?",
+                [judul, isi, sumber, filename, artikelId],
+                (err, result) => {
+                    if (err) {
+                        if (filename) {
+                            const deleteFilePath = path.join(__dirname, "../src/img/artikel", filename);
+                            fs.unlinkSync(deleteFilePath);
+                        }
+                        console.error(err);
+                        return res.status(500).json({
+                            isUpdated: false,
+                            info: "Gagal mengupdate artikel",
+                        });
+                    }
+                    return res.status(200).json({
+                        isUpdated: true,
+                        info: "Artikel berhasil diupdate!"
+                    });
+                }
+            );
+        });
       });
     } else {
       db.query(
@@ -454,10 +466,10 @@ const deleteArtikelById = (req, res) => {
         });
       }
   
-    //   const thumbnailPath = result[0].thumbnail;
-    //   if (thumbnailPath) {
-    //     fs.unlinkSync(path.join(__dirname, '../src/img/artikel', thumbnailPath));
-    //   }
+       const thumbnailPath = result[0].thumbnail;
+       if (thumbnailPath) {
+         fs.unlinkSync(path.join(__dirname, '../src/img/artikel', thumbnailPath));
+       }
   
       db.query('DELETE FROM artikel WHERE id = ?', artikelId, (err, result) => {
         if (err) {
@@ -467,7 +479,7 @@ const deleteArtikelById = (req, res) => {
             info: 'Kesalahan saat menghapus artikel',
           });
         }
-  
+
         return res.status(200).json({
           isDeleted: true,
           info: 'Berhasil menghapus artikel',
@@ -494,7 +506,8 @@ const getArtikelById = (req, res) => {
           info: 'Artikel tidak ditemukan!',
         });
       }
-  
+
+      result[0].thumbnail = process.env.HOST + ":" + process.env.PORT_SERVER + "/api/img/artikel/" + result[0].thumbnail;
       return res.status(200).json({
         isRetrieved: true,
         artikel: result[0],
@@ -511,10 +524,14 @@ const viewAllArtikel = (req, res) => {
           info: 'Terjadi kesalahan saat mengambil artikel',
         });
       }
-  
+      var list = result;
+      list.forEach((val)=>{
+          val.thumbnail = process.env.HOST + ":" + process.env.PORT_SERVER + "/api/img/artikel/" + val.thumbnail;
+      })
+
       return res.status(200).json({
         isRetrieved: true,
-        artikel: result,
+        artikel: list,
       });
     });
 };  
