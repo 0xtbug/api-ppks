@@ -154,7 +154,6 @@ const login = async (req, res) => {
 
                   return res.status(200).json({
                     isAccepted: true,
-                    isPrivate: false,
                     msg: "Login berhasil!",
                     data: otpResponse,
                   });
