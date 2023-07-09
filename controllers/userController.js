@@ -403,7 +403,7 @@ const getpfp = (req, res)=> {
       res.status(500).json( { "info": err } );
     }else{
       const list = rows;
-      res.status(200).json({ "nama": list[0].nama, "img": process.env.HOST + ":" + process.env.PORT_SERVER + "/api/img/user/" + list[0].pfp, "device_id": deviceId });
+      res.status(200).json({ "nama": list[0].nama, "img": process.env.HOST + ":" + process.env.PORT_SERVER + "/api/img/user/" + list[0].pfp, "device_id": deviceId, "phone": phone });
     }
   })
 }
