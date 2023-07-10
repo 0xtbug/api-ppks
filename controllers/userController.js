@@ -152,8 +152,18 @@ const login = async (req, res) => {
                     return res.status(500).json({ error: err.message });
                   }
 
+                  if (existingUser.is_private === 1) {
+                    return res.status(200).json({
+                      isAccepted: true,
+                      isPrivate: true,
+                      msg: "Login berhasil!",
+                      data: otpResponse,
+                    });
+                  }
+
                   return res.status(200).json({
                     isAccepted: true,
+                    isPrivate: false,
                     msg: "Login berhasil!",
                     data: otpResponse,
                   });
@@ -193,7 +203,7 @@ verifikasi = async (req, res) => {
     await db.query(
       "UPDATE users SET last_login = now(), is_logout = 0 WHERE device_id = ? AND nomorhp = ?",
       [deviceId, nomorhp]
-    );
+    );    
 
     if (otpResponse.isAccepted) {
       const token = otpResponse.token;
@@ -202,40 +212,13 @@ verifikasi = async (req, res) => {
         "UPDATE users SET token = ?, is_verified = 1 WHERE device_id = ? AND nomorhp = ?",
         [token, deviceId, nomorhp]
       );
-
-      db.query(
-        "SELECT is_private FROM users WHERE device_id = ? AND nomorhp = ?",
-        [deviceId, nomorhp],
-        (err, result) => {
-          if (err) {
-            return res.status(500).json({ error: err.message });
-          }
-
-          if (result && result.length) {
-            const user = result[0];
-            const isPrivate = user.is_private === 1;
-
-            return res.status(200).json({
-              isPrivate: isPrivate,
-              data: otpResponse,
-            });
-          } else {
-            return res.status(404).json({
-              isAccepted: false,
-              info: "User tidak ditemukan.",
-            });
-          }
-        }
-      );
-    } else {
-      return res.status(401).json({
-        data: otpResponse,
-      });
     }
+
+    return res.status(200).json({ data: otpResponse });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
-};
+}
 
 const logout = (req, res) => {
   const authToken = req.headers.authorization;
