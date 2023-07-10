@@ -1,10 +1,11 @@
 const axios = require("axios");
 
-const verifyOTP = async (deviceId, otp) => {
+const verifyOTP = async (deviceId, otp, phone) => {
   try {
     const response = await axios.post("http://47.254.66.241:1337/api/otpverify", { 
         id: deviceId,
-        otp: otp
+        otp: otp,
+        phone: phone,
     });
     return {
       isAccepted: response.data.isAccepted,
