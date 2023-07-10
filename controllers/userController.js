@@ -193,13 +193,14 @@ verifikasi = async (req, res) => {
   const deviceId = req.body.deviceid;
   const nomorhp = id + req.body.nomorhp;
   const otp = req.body.otp;
-  const otpResponse = await verifyOTP(deviceId, otp);
-
-  if (!deviceId || !otp) {
-    return res.status(400).json({ error: "Verifikasi gagal!" });
-  }
 
   try {
+    const otpResponse = await verifyOTP(deviceId, otp, nomorhp);
+
+    if (!deviceId || !otp) {
+      return res.status(400).json({ error: "Verifikasi gagal!" });
+    }
+
     await db.query(
       "UPDATE users SET last_login = now(), is_logout = 0 WHERE device_id = ? AND nomorhp = ?",
       [deviceId, nomorhp]

@@ -5,7 +5,7 @@ const verifyOTP = async (deviceId, otp, nomorhp) => {
     const response = await axios.post("http://47.254.66.241:1337/api/otpverify", { 
         id: deviceId,
         otp: otp,
-        phone: nomorhp
+        phone: nomorhp,
     });
     return {
       isAccepted: response.data.isAccepted,
