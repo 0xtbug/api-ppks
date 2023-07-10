@@ -203,7 +203,10 @@ verifikasi = async (req, res) => {
         [token, deviceId, nomorhp]
       );
 
-      db.query("SELECT is_private FROM users WHERE device_id = ? AND nomorhp = ?", [deviceId, nomorhp], (err,result) => {
+      db.query(
+        "SELECT is_private FROM users WHERE device_id = ? AND nomorhp = ?",
+        [deviceId, nomorhp],
+        (err, result) => {
           if (err) {
             return res.status(500).json({ error: err.message });
           }
@@ -222,7 +225,13 @@ verifikasi = async (req, res) => {
               info: "User tidak ditemukan.",
             });
           }
-        }); 
+        }
+      );
+    } else {
+      return res.status(401).json({
+        isAccepted: false,
+        info: "OTP tidak valid.",
+      });
     }
   } catch (error) {
     return res.status(500).json({ error: error.message });
