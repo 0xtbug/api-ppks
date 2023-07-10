@@ -220,7 +220,7 @@ verifikasi = async (req, res) => {
               data: otpResponse,
             });
           } else {
-            return res.status(401).json({
+            return res.status(404).json({
               isAccepted: false,
               info: "User tidak ditemukan.",
             });
@@ -229,8 +229,7 @@ verifikasi = async (req, res) => {
       );
     } else {
       return res.status(401).json({
-        isAccepted: false,
-        info: "OTP tidak valid.",
+        data: otpResponse,
       });
     }
   } catch (error) {
